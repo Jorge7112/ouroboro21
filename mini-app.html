@@ -346,30 +346,56 @@
     }
   }
 
-  async function llamarWebhook(accion, datos = {}, silencioso = false) {
-    if (!usuarioActual) {
-      if (!silencioso) mostrarModal('Error', 'No se pudo identificar al usuario.');
-      return null;
-    }
-    try {
+  // ========================================
+  // FUNCIÓN DE LLAMADA AL WEBHOOK (con JSONP)
+  // ========================================
+  function llamarWebhook(accion, datos = {}, silencioso = false) {
+    return new Promise((resolve) => {
+      if (!usuarioActual) {
+        if (!silencioso) mostrarModal('Error', 'No se pudo identificar al usuario.');
+        resolve(null);
+        return;
+      }
+
       const payload = {
         accion: accion,
         userId: usuarioActual.id,
         username: usuarioActual.username,
         ...datos
       };
-      const response = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-      const texto = await response.text();
-      try { return JSON.parse(texto); }
-      catch (e) { return { ok: true, mensaje: texto }; }
-    } catch (error) {
-      if (!silencioso) mostrarModal('⚠️ Error', 'Error de conexión: ' + error.message);
-      return null;
-    }
+
+      // Usar JSONP para evitar CORS: crear un script dinámico
+      const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      const url = WEBHOOK_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload)) + "&callback=" + callbackName;
+
+      let timeoutId = setTimeout(() => {
+        cleanup();
+        if (!silencioso) mostrarModal('⚠️ Error', 'Tiempo de espera agotado');
+        resolve(null);
+      }, 15000);
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        if (scriptElement && scriptElement.parentNode) {
+          scriptElement.parentNode.removeChild(scriptElement);
+        }
+      }
+
+      window[callbackName] = function(data) {
+        cleanup();
+        resolve(data);
+      };
+
+      const scriptElement = document.createElement('script');
+      scriptElement.src = url;
+      scriptElement.onerror = function() {
+        cleanup();
+        if (!silencioso) mostrarModal('⚠️ Error', 'Error de conexión');
+        resolve(null);
+      };
+      document.body.appendChild(scriptElement);
+    });
   }
 
   async function minar() {
