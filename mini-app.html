@@ -247,14 +247,7 @@
   </div>
 
 <script>
-  // ========================================
-  // CONFIGURACIÓN
-  // ========================================
-  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby8aDzkjXzB17S_nyXCGXKmuDE1VMzHF_R5dt3jufSyAtbteXYgjovz9KABTKQgouy2/exec";
-
-  // ========================================
-  // INICIALIZACIÓN DE TELEGRAM
-  // ========================================
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxOr0oqX0PWXT78vwMtPzC7WOyZyOBYR6gwWvAPDfs0gx82nOB_Q2UPMciWGEWeWAkR/exec";
   const tg = window.Telegram?.WebApp;
   let usuarioActual = null;
 
@@ -278,9 +271,6 @@
     document.getElementById('userInfo').textContent = '🧪 Modo prueba (navegador)';
   }
 
-  // ========================================
-  // TEMPORIZADOR
-  // ========================================
   let totalSeconds = 0;
   let timerInterval = null;
   const timerEl = document.getElementById('timer');
@@ -296,30 +286,23 @@
       progressEl.style.width = '100%';
       progressText.textContent = '100% completado';
       btnClaim.disabled = false;
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
       return;
     }
-
     const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
     const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
     const s = String(totalSeconds % 60).padStart(2, '0');
     timerEl.textContent = `${h}:${m}:${s}`;
-
     const segundosEn24h = 24 * 60 * 60;
     const progreso = ((segundosEn24h - totalSeconds) / segundosEn24h) * 100;
     progressEl.style.width = progreso + '%';
     progressText.textContent = progreso.toFixed(1) + '% completado';
-
     totalSeconds--;
   }
 
   function arrancarTimer(segundos) {
     if (timerInterval) clearInterval(timerInterval);
     totalSeconds = segundos;
-
     if (segundos <= 0) {
       timerEl.textContent = '✅ LISTO';
       timerLabel.textContent = '¡PUEDES MINAR AHORA!';
@@ -337,20 +320,14 @@
     }
   }
 
-  // ========================================
-  // CONSULTAR ESTADO AL CARGAR
-  // ========================================
   async function cargarEstadoInicial() {
     const res = await llamarWebhook('estado', {}, true);
-
     if (!res || !res.estado) {
       timerEl.textContent = '--:--:--';
       timerLabel.textContent = 'Error al cargar';
       return;
     }
-
     const est = res.estado;
-
     if (!est.registrado) {
       timerEl.textContent = '❌';
       timerLabel.textContent = 'REGÍSTRATE PRIMERO';
@@ -361,7 +338,6 @@
       btnClaim.onclick = abrirRegistro;
       return;
     }
-
     if (est.puedeMinar) {
       arrancarTimer(0);
     } else {
@@ -369,15 +345,11 @@
     }
   }
 
-  // ========================================
-  // COMUNICACIÓN CON APPS SCRIPT
-  // ========================================
   async function llamarWebhook(accion, datos = {}, silencioso = false) {
     if (!usuarioActual) {
       if (!silencioso) mostrarModal('Error', 'No se pudo identificar al usuario.');
       return null;
     }
-
     try {
       const payload = {
         accion: accion,
@@ -385,34 +357,24 @@
         username: usuarioActual.username,
         ...datos
       };
-
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
-
       const texto = await response.text();
-      try {
-        return JSON.parse(texto);
-      } catch (e) {
-        return { ok: true, mensaje: texto };
-      }
+      try { return JSON.parse(texto); }
+      catch (e) { return { ok: true, mensaje: texto }; }
     } catch (error) {
       if (!silencioso) mostrarModal('⚠️ Error', 'Error de conexión: ' + error.message);
       return null;
     }
   }
 
-  // ========================================
-  // MINAR
-  // ========================================
   async function minar() {
     btnClaim.disabled = true;
     btnClaim.innerHTML = 'Minando...<span class="loading"></span>';
-
     const res = await llamarWebhook('minar');
-
     if (res && res.ok) {
       mostrarModal('⛏️ Minería', res.mensaje || 'Has minado 5 ORO21');
       arrancarTimer(24 * 60 * 60);
@@ -423,14 +385,9 @@
   }
 
   btnClaim.addEventListener('click', function() {
-    if (!this.onclick || this.onclick === null) {
-      minar();
-    }
+    if (!this.onclick || this.onclick === null) { minar(); }
   });
 
-  // ========================================
-  // OTRAS ACCIONES
-  // ========================================
   async function consultarSaldo() {
     mostrarModal('💰 Consultando...', 'Un momento...');
     const res = await llamarWebhook('saldo');
@@ -475,9 +432,6 @@
       '⛏️ MINAR: gana 5 ORO21 cada 24h\n💰 SALDO: consulta tu saldo actual\n💸 RETIRAR: solicita retiro (mín. 100 ORO21)\n📋 MIS RETIROS: historial\n📝 REGISTRO: formulario oficial\n📊 STATS: métricas del proyecto');
   }
 
-  // ========================================
-  // MODAL
-  // ========================================
   function mostrarModal(titulo, texto) {
     document.getElementById('modalTitle').textContent = titulo;
     document.getElementById('modalText').textContent = texto;
@@ -488,9 +442,6 @@
     document.getElementById('modal').classList.remove('active');
   }
 
-  // ========================================
-  // ARRANCAR AL CARGAR
-  // ========================================
   window.addEventListener('load', () => {
     setTimeout(cargarEstadoInicial, 500);
   });
