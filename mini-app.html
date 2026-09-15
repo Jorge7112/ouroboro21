@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>OUROBORO21 · Miner</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
     background: radial-gradient(circle at 50% 30%, #1a1200 0%, #000 80%);
@@ -18,30 +19,33 @@
     overflow-x: hidden;
   }
 
-  header {
-    text-align: center;
-    margin-bottom: 20px;
-  }
+  header { text-align: center; margin-bottom: 15px; }
   header h1 {
-    font-size: 28px;
+    font-size: 26px;
     letter-spacing: 3px;
     background: linear-gradient(180deg, #fff2b0, #d4a017, #8b6914);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 900;
   }
-  header p {
-    font-size: 12px;
+  header p { font-size: 11px; color: #a08030; letter-spacing: 1px; margin-top: 4px; }
+
+  .user-info {
+    font-size: 11px;
     color: #a08030;
+    background: rgba(245, 215, 110, 0.08);
+    border: 1px solid #3a2a08;
+    border-radius: 20px;
+    padding: 6px 14px;
+    margin-bottom: 15px;
     letter-spacing: 1px;
-    margin-top: 4px;
   }
 
   .coin-container {
-    width: 240px;
-    height: 240px;
+    width: 200px;
+    height: 200px;
     perspective: 1000px;
-    margin: 30px 0;
+    margin: 10px 0 20px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -59,29 +63,29 @@
   }
 
   .timer {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: bold;
     color: #f5d76e;
     text-shadow: 0 0 15px rgba(245, 215, 110, 0.7);
-    margin: 10px 0;
+    margin: 5px 0;
     letter-spacing: 2px;
   }
   .timer-label {
-    font-size: 12px;
+    font-size: 11px;
     color: #a08030;
     letter-spacing: 1px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
   }
 
   .progress-bar {
     width: 100%;
-    max-width: 320px;
-    height: 10px;
+    max-width: 300px;
+    height: 8px;
     background: #221a05;
     border-radius: 10px;
     overflow: hidden;
     border: 1px solid #3a2a08;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .progress-fill {
     height: 100%;
@@ -91,14 +95,14 @@
     box-shadow: 0 0 12px rgba(245, 215, 110, 0.8);
   }
   .progress-text {
-    font-size: 12px;
+    font-size: 11px;
     color: #a08030;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
   }
 
   .btn-claim {
-    padding: 15px 50px;
-    font-size: 16px;
+    padding: 14px 45px;
+    font-size: 15px;
     font-weight: bold;
     letter-spacing: 2px;
     color: #1a1200;
@@ -108,12 +112,9 @@
     cursor: pointer;
     box-shadow: 0 5px 20px rgba(245, 215, 110, 0.5);
     transition: transform 0.15s, box-shadow 0.15s;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
   }
-  .btn-claim:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 10px rgba(245, 215, 110, 0.8);
-  }
+  .btn-claim:active { transform: scale(0.95); }
   .btn-claim:disabled {
     background: #3a2a08;
     color: #6a5020;
@@ -124,13 +125,13 @@
   .menu {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     max-width: 320px;
   }
   .menu button {
     padding: 14px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: bold;
     color: #f5d76e;
     background: #1a1200;
@@ -140,18 +141,75 @@
     transition: background 0.2s, border 0.2s;
     letter-spacing: 1px;
   }
-  .menu button:active {
-    background: #2a1e05;
-    border-color: #f5d76e;
-  }
+  .menu button:active { background: #2a1e05; border-color: #f5d76e; }
+  .menu button:disabled { opacity: 0.5; }
 
   footer {
-    margin-top: 30px;
-    font-size: 11px;
+    margin-top: 25px;
+    font-size: 10px;
     color: #6a5020;
     text-align: center;
     letter-spacing: 1px;
   }
+
+  /* Modal de resultado */
+  .modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 1000;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: linear-gradient(180deg, #1a1200, #0a0800);
+    border: 1px solid #4a3510;
+    border-radius: 20px;
+    padding: 25px 20px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(245, 215, 110, 0.3);
+  }
+  .modal-content h2 {
+    color: #f5d76e;
+    font-size: 18px;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+  }
+  .modal-content p {
+    color: #c9a94a;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .modal-content button {
+    padding: 12px 35px;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #1a1200;
+    background: linear-gradient(180deg, #fff2b0, #d4a017);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+  }
+
+  .loading {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #1a1200;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -160,6 +218,8 @@
     <h1>OUROBORO21</h1>
     <p>El ciclo eterno del valor en la red TON</p>
   </header>
+
+  <div class="user-info" id="userInfo">Cargando usuario...</div>
 
   <div class="coin-container">
     <img class="coin" src="logo.png" alt="ORO21">
@@ -176,27 +236,71 @@
   <button class="btn-claim" id="btnClaim">⛏️ MINAR</button>
 
   <div class="menu">
-    <button>💰 Saldo</button>
-    <button>💸 Retirar</button>
-    <button>📋 Mis Retiros</button>
-    <button>📝 Registro</button>
-    <button>📊 Stats</button>
-    <button>❓ Ayuda</button>
+    <button onclick="consultarSaldo()">💰 Saldo</button>
+    <button onclick="solicitarRetiro()">💸 Retirar</button>
+    <button onclick="misRetiros()">📋 Mis Retiros</button>
+    <button onclick="abrirRegistro()">📝 Registro</button>
+    <button onclick="verStats()">📊 Stats</button>
+    <button onclick="mostrarAyuda()">❓ Ayuda</button>
   </div>
 
   <footer>
     $ORO21 · TON · 21.000.000 suministro fijo
   </footer>
 
+  <!-- Modal de resultados -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2 id="modalTitle">Resultado</h2>
+      <p id="modalText">Cargando...</p>
+      <button onclick="cerrarModal()">CERRAR</button>
+    </div>
+  </div>
+
 <script>
-  // Temporizador 24h (solo visual por ahora)
+  // ========================================
+  // CONFIGURACIÓN
+  // ========================================
+  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzadyZyVeysX_yqBJCFQZT7hOWt8djfI8xJ-gtso8tJgmETza1Y_mGQoChzIMcPH3wi/exec";
+
+  // ========================================
+  // INICIALIZACIÓN DE TELEGRAM
+  // ========================================
+  const tg = window.Telegram?.WebApp;
+  let usuarioActual = null;
+
+  if (tg) {
+    tg.ready();
+    tg.expand();
+
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+      usuarioActual = {
+        id: user.id,
+        username: user.username || '',
+        nombre: (user.first_name || '') + ' ' + (user.last_name || '')
+      };
+      document.getElementById('userInfo').textContent =
+        '👤 ' + (usuarioActual.username ? '@' + usuarioActual.username : usuarioActual.nombre.trim());
+    } else {
+      document.getElementById('userInfo').textContent = '⚠️ Abre desde Telegram';
+    }
+  } else {
+    // Modo prueba en navegador
+    usuarioActual = { id: 123456789, username: 'prueba', nombre: 'Usuario Prueba' };
+    document.getElementById('userInfo').textContent = '🧪 Modo prueba (navegador)';
+  }
+
+  // ========================================
+  // TEMPORIZADOR VISUAL (24h)
+  // ========================================
   let totalSeconds = 24 * 60 * 60;
   const timerEl = document.getElementById('timer');
   const progressEl = document.getElementById('progress');
   const progressText = document.getElementById('progress-text');
   const btnClaim = document.getElementById('btnClaim');
 
-  function actualizar() {
+  function actualizarTimer() {
     const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
     const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
     const s = String(totalSeconds % 60).padStart(2, '0');
@@ -206,24 +310,131 @@
     progressEl.style.width = progreso + '%';
     progressText.textContent = progreso.toFixed(1) + '% completado';
 
-    if (totalSeconds > 0) {
-      totalSeconds--;
-    } else {
-      btnClaim.disabled = false;
-      timerEl.textContent = '¡LISTO!';
+    if (totalSeconds > 0) totalSeconds--;
+  }
+  setInterval(actualizarTimer, 1000);
+  actualizarTimer();
+
+  // ========================================
+  // FUNCIONES DE COMUNICACIÓN CON APPS SCRIPT
+  // ========================================
+  async function llamarWebhook(accion, datos = {}) {
+    if (!usuarioActual) {
+      mostrarModal('Error', 'No se pudo identificar al usuario.');
+      return null;
+    }
+
+    try {
+      const payload = {
+        accion: accion,
+        userId: usuarioActual.id,
+        username: usuarioActual.username,
+        ...datos
+      };
+
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      const texto = await response.text();
+      try {
+        return JSON.parse(texto);
+      } catch (e) {
+        return { ok: true, mensaje: texto };
+      }
+    } catch (error) {
+      return { ok: false, mensaje: 'Error de conexión: ' + error.message };
     }
   }
 
-  btnClaim.disabled = true;
-  setInterval(actualizar, 1000);
-  actualizar();
+  // ========================================
+  // ACCIONES DE LOS BOTONES
+  // ========================================
 
-  // Simulación de minado (para probar el diseño)
-  btnClaim.addEventListener('click', () => {
+  // MINAR
+  btnClaim.addEventListener('click', async () => {
     btnClaim.disabled = true;
-    totalSeconds = 24 * 60 * 60;
-    alert('⛏️ Minería registrada (demo)');
+    btnClaim.innerHTML = 'Minando...<span class="loading"></span>';
+
+    const res = await llamarWebhook('minar');
+
+    if (res && res.ok) {
+      mostrarModal('⛏️ Minería Exitosa', res.mensaje || 'Has minado 5 ORO21');
+      totalSeconds = 24 * 60 * 60;
+    } else {
+      mostrarModal('⚠️ Aviso', res?.mensaje || 'No se pudo minar');
+    }
+
+    btnClaim.innerHTML = '⛏️ MINAR';
+    btnClaim.disabled = false;
   });
+
+  // SALDO
+  async function consultarSaldo() {
+    mostrarModal('💰 Consultando...', 'Un momento...');
+    const res = await llamarWebhook('saldo');
+    mostrarModal('💰 Tu Saldo', res?.mensaje || 'No disponible');
+  }
+
+  // RETIRAR
+  async function solicitarRetiro() {
+    const cantidad = prompt('¿Cuántos ORO21 deseas retirar?\n(Mínimo: 100)');
+    if (!cantidad) return;
+
+    const cant = parseInt(cantidad);
+    if (isNaN(cant) || cant < 100) {
+      mostrarModal('⚠️ Error', 'Cantidad inválida. Mínimo 100 ORO21.');
+      return;
+    }
+
+    mostrarModal('💸 Procesando...', 'Enviando solicitud...');
+    const res = await llamarWebhook('retirar', { cantidad: cant });
+    mostrarModal('💸 Retiro', res?.mensaje || 'Solicitud enviada');
+  }
+
+  // MIS RETIROS
+  async function misRetiros() {
+    mostrarModal('📋 Cargando...', 'Un momento...');
+    const res = await llamarWebhook('misRetiros');
+    mostrarModal('📋 Mis Retiros', res?.mensaje || 'Sin retiros');
+  }
+
+  // REGISTRO
+  function abrirRegistro() {
+    mostrarModal('📝 Registro',
+      'Abre el formulario oficial para registrarte en OUROBORO21. Si ya estás registrado, no necesitas hacerlo de nuevo.');
+    setTimeout(() => {
+      if (tg) tg.openLink('https://docs.google.com/forms/d/e/1FAIpQLSdAmN2Ljz7zgN7xrhbaJZptPQvP58Mq2hJ17ynNKwnrUPKmuQ/viewform');
+    }, 1500);
+  }
+
+  // STATS
+  async function verStats() {
+    mostrarModal('📊 Cargando...', 'Un momento...');
+    const res = await llamarWebhook('stats');
+    mostrarModal('📊 Estadísticas', res?.mensaje || 'No disponible');
+  }
+
+  // AYUDA
+  function mostrarAyuda() {
+    mostrarModal('❓ Ayuda',
+      '⛏️ MINAR: gana 5 ORO21 cada 24h\n💰 SALDO: consulta tu saldo actual\n💸 RETIRAR: solicita retiro (mín. 100 ORO21)\n📋 MIS RETIROS: historial\n📝 REGISTRO: formulario oficial\n📊 STATS: métricas del proyecto');
+  }
+
+  // ========================================
+  // MODAL
+  // ========================================
+  function mostrarModal(titulo, texto) {
+    document.getElementById('modalTitle').textContent = titulo;
+    document.getElementById('modalText').textContent = texto;
+    document.getElementById('modal').classList.add('active');
+  }
+
+  function cerrarModal() {
+    document.getElementById('modal').classList.remove('active');
+  }
 </script>
 
 </body>
