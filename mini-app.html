@@ -247,7 +247,10 @@
   </div>
 
 <script>
-  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzkvGEfnXdLjnv5P1sijj_udpdKzGFQA7J9IeNjcXSAdo4Gy1FDuD2FULJMlnYESSw/exec";
+  // ========================================
+  // URL DEL WEBHOOK - PROYECTO v4
+  // ========================================
+  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyPzr7JunHsiiLs3JyDAgiXe1a8GyVJvh9EtBO03WhXfVnIRzFtDn1CpzUqtAsgfNM/exec";
 
   const tg = window.Telegram?.WebApp;
   let usuarioActual = null;
@@ -351,9 +354,6 @@
     });
   }
 
-  // ========================================
-  // JSONP - Evita el bloqueo CORS
-  // ========================================
   function llamarWebhook(accion, datos = {}, silencioso = false) {
     return new Promise((resolve) => {
       if (!usuarioActual) {
