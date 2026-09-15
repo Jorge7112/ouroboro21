@@ -247,7 +247,7 @@
   </div>
 
 <script>
-  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxOr0oqX0PWXT78vwMtPzC7WOyZyOBYR6gwWvAPDfs0gx82nOB_Q2UPMciWGEWeWAkR/exec";
+  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzkvGEfnXdLjnv5P1sijj_udpdKzGFQA7J9IeNjcXSAdo4Gy1FDuD2FULJMlnYESSw/exec";
 
   const tg = window.Telegram?.WebApp;
   let usuarioActual = null;
@@ -321,33 +321,38 @@
     }
   }
 
-  async function cargarEstadoInicial() {
-    const res = await llamarWebhook('estado', {}, true);
-    if (!res || !res.estado) {
-      timerEl.textContent = '--:--:--';
-      timerLabel.textContent = 'Error al cargar';
-      return;
-    }
-    const est = res.estado;
-    if (!est.registrado) {
-      timerEl.textContent = '❌';
-      timerLabel.textContent = 'REGÍSTRATE PRIMERO';
-      progressText.textContent = '—';
-      progressEl.style.width = '0%';
-      btnClaim.disabled = false;
-      btnClaim.textContent = '📝 REGISTRARSE';
-      btnClaim.onclick = abrirRegistro;
-      return;
-    }
-    if (est.puedeMinar) {
-      arrancarTimer(0);
-    } else {
-      arrancarTimer(est.segundosRestantes);
-    }
+  function cargarEstadoInicial() {
+    return new Promise(async (resolve) => {
+      const res = await llamarWebhook('estado', {}, true);
+      if (!res || !res.estado) {
+        timerEl.textContent = '--:--:--';
+        timerLabel.textContent = 'Error al cargar';
+        resolve();
+        return;
+      }
+      const est = res.estado;
+      if (!est.registrado) {
+        timerEl.textContent = '❌';
+        timerLabel.textContent = 'REGÍSTRATE PRIMERO';
+        progressText.textContent = '—';
+        progressEl.style.width = '0%';
+        btnClaim.disabled = false;
+        btnClaim.textContent = '📝 REGISTRARSE';
+        btnClaim.onclick = abrirRegistro;
+        resolve();
+        return;
+      }
+      if (est.puedeMinar) {
+        arrancarTimer(0);
+      } else {
+        arrancarTimer(est.segundosRestantes);
+      }
+      resolve();
+    });
   }
 
   // ========================================
-  // FUNCIÓN DE LLAMADA AL WEBHOOK (con JSONP)
+  // JSONP - Evita el bloqueo CORS
   // ========================================
   function llamarWebhook(accion, datos = {}, silencioso = false) {
     return new Promise((resolve) => {
@@ -364,11 +369,13 @@
         ...datos
       };
 
-      // Usar JSONP para evitar CORS: crear un script dinámico
       const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
       const url = WEBHOOK_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload)) + "&callback=" + callbackName;
 
-      let timeoutId = setTimeout(() => {
+      let finalizado = false;
+      const timeoutId = setTimeout(() => {
+        if (finalizado) return;
+        finalizado = true;
         cleanup();
         if (!silencioso) mostrarModal('⚠️ Error', 'Tiempo de espera agotado');
         resolve(null);
@@ -376,13 +383,15 @@
 
       function cleanup() {
         clearTimeout(timeoutId);
-        delete window[callbackName];
+        try { delete window[callbackName]; } catch(e) {}
         if (scriptElement && scriptElement.parentNode) {
           scriptElement.parentNode.removeChild(scriptElement);
         }
       }
 
       window[callbackName] = function(data) {
+        if (finalizado) return;
+        finalizado = true;
         cleanup();
         resolve(data);
       };
@@ -390,6 +399,8 @@
       const scriptElement = document.createElement('script');
       scriptElement.src = url;
       scriptElement.onerror = function() {
+        if (finalizado) return;
+        finalizado = true;
         cleanup();
         if (!silencioso) mostrarModal('⚠️ Error', 'Error de conexión');
         resolve(null);
