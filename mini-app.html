@@ -293,7 +293,7 @@
   </div>
 
 <script>
-  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxpuD0Tg_xs4xeSfgSEue55V5QKEazYKs5Q5dRhQnJHFJDdM_BUqH8YNoX0Qj4enPRp/exec";
+  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbymAsRtFWseGmRCYOlWjtTD_Prmr8zPis9zGzVu9b2ILjNjvcB-d84GoV6HAgPbv_Hy/exec";
 
   const tg = window.Telegram?.WebApp;
   let usuarioActual = null;
@@ -376,9 +376,9 @@
       return;
     }
     const texto = res.mensaje;
-    const matchTotal = texto.match(/Total acumulado:\s*([\d.]+)/);
-    const matchRetirado = texto.match(/Ya retirado:\s*([\d.]+)/);
-    const matchDisponible = texto.match(/Disponible:\s*([\d.]+)/);
+    const matchTotal = texto.match(/Total acumulado:\s*([\d.-]+)/);
+    const matchRetirado = texto.match(/Ya retirado:\s*([\d.-]+)/);
+    const matchDisponible = texto.match(/Disponible:\s*([\d.-]+)/);
     if (matchTotal) document.getElementById('saldoTotal').textContent = matchTotal[1] + ' ORO21';
     if (matchRetirado) document.getElementById('saldoRetirado').textContent = matchRetirado[1] + ' ORO21';
     if (matchDisponible) document.getElementById('saldoDisponible').textContent = matchDisponible[1] + ' ORO21';
@@ -389,38 +389,47 @@
     }
   }
 
-  function cargarEstadoInicial() {
-    return new Promise(async (resolve) => {
-      const res = await llamarWebhook('estado', {}, true);
-      if (!res || !res.estado) {
-        timerEl.textContent = '--:--:--';
-        timerLabel.textContent = 'Error al cargar';
-        resolve();
-        return;
-      }
-      const est = res.estado;
-      if (!est.registrado) {
-        timerEl.textContent = '❌';
-        timerLabel.textContent = 'REGÍSTRATE PRIMERO';
-        progressText.textContent = '—';
-        progressEl.style.width = '0%';
-        btnClaim.disabled = false;
-        btnClaim.textContent = '📝 REGISTRARSE EN EL BOT';
-        btnClaim.onclick = function() {
-          mostrarModal('📝 Regístrate en el bot',
-            'Ve al bot y escribe /registro para registrarte paso a paso.');
-        };
-        resolve();
-        return;
-      }
-      if (est.puedeMinar) {
-        arrancarTimer(0);
-      } else {
-        arrancarTimer(est.segundosRestantes);
-      }
+  async function cargarEstadoInicial() {
+    timerLabel.textContent = 'Conectando con el servidor...';
+
+    let res = await llamarWebhook('estado', {}, true);
+
+    if (!res || !res.estado) {
+      timerEl.textContent = '--:--:--';
+      timerLabel.textContent = 'Reintentando conexion...';
+      res = await llamarWebhook('estado', {}, true);
+    }
+
+    if (!res || !res.estado) {
+      timerEl.textContent = '--:--:--';
+      timerLabel.textContent = 'Error al cargar';
+      return;
+    }
+
+    const est = res.estado;
+
+    if (!est.registrado) {
+      timerEl.textContent = '❌';
+      timerLabel.textContent = 'REGÍSTRATE PRIMERO';
+      progressText.textContent = '—';
+      progressEl.style.width = '0%';
+      btnClaim.disabled = false;
+      btnClaim.textContent = '📝 REGISTRARSE EN EL BOT';
+      btnClaim.onclick = function() {
+        mostrarModal('📝 Regístrate en el bot',
+          'Ve al bot y escribe /registro para registrarte paso a paso.');
+      };
       await actualizarPanelSaldos();
-      resolve();
-    });
+      return;
+    }
+
+    if (est.puedeMinar) {
+      arrancarTimer(0);
+    } else {
+      arrancarTimer(est.segundosRestantes);
+    }
+
+    await actualizarPanelSaldos();
   }
 
   function llamarWebhook(accion, datos = {}, silencioso = false) {
@@ -445,7 +454,7 @@
         cleanup();
         if (!silencioso) mostrarModal('⚠️ Error', 'Tiempo de espera agotado');
         resolve(null);
-      }, 15000);
+      }, 35000);
       function cleanup() {
         clearTimeout(timeoutId);
         try { delete window[callbackName]; } catch(e) {}
