@@ -577,3 +577,58 @@
 
   function cargarFases() {
     return new Promise((resolve
+          document.body.appendChild(scriptElement);
+    });
+  }
+
+  async function minar() {
+    btnMinar.disabled = true;
+    btnMinar.innerHTML = 'Minando...<span class="loading"></span>';
+    const res = await llamarWebhook('minar');
+    if (res && res.ok) {
+      mostrarModal('⛏️ Minería', res.mensaje || 'Has minado ORO21');
+      arrancarTimer(24 * 60 * 60);
+      actualizarPanelSaldos();
+      cargarFases();
+    } else {
+      mostrarModal('⚠️ Aviso', (res && res.mensaje) ? res.mensaje : 'No se pudo minar');
+      cargarEstadoInicial();
+    }
+  }
+
+  btnMinar.addEventListener('click', function() {
+    if (!this.onclick || this.onclick === null) { minar(); }
+  });
+
+  async function solicitarRetiro() {
+    const cantidad = prompt('¿Cuántos ORO21 deseas retirar?\n(Mínimo: 100)');
+    if (!cantidad) return;
+    const cant = parseInt(cantidad);
+    if (isNaN(cant) || cant < 100) {
+      mostrarModal('⚠️ Error', 'Cantidad inválida. Mínimo 100 ORO21.');
+      return;
+    }
+    mostrarModal('💸 Procesando...', 'Enviando solicitud...');
+    const res = await llamarWebhook('retirar', { cantidad: cant });
+    mostrarModal('💸 Retiro', (res && res.mensaje) ? res.mensaje : 'Solicitud enviada');
+    actualizarPanelSaldos();
+  }
+
+  function mostrarModal(titulo, texto) {
+    document.getElementById('modalTitle').textContent = titulo;
+    document.getElementById('modalText').textContent = texto;
+    document.getElementById('modal').classList.add('active');
+  }
+
+  function cerrarModal() {
+    document.getElementById('modal').classList.remove('active');
+  }
+
+  window.addEventListener('load', () => {
+    cargarFases();
+    setTimeout(cargarEstadoInicial, 500);
+  });
+</script>
+
+</body>
+</html>
