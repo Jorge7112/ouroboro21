@@ -86,11 +86,7 @@
     pointer-events: none;
     z-index: 3;
   }
-  .anillo-fondo {
-    fill: none;
-    stroke: #2a1e05;
-    stroke-width: 5;
-  }
+  .anillo-fondo { fill: none; stroke: #2a1e05; stroke-width: 5; }
   .anillo-fill {
     fill: none;
     stroke: url(#gradienteAnillo);
@@ -121,10 +117,7 @@
     margin-bottom: 10px;
     text-align: center;
   }
-  .moneda-progreso strong {
-    color: #fff2b0;
-    font-size: 13px;
-  }
+  .moneda-progreso strong { color: #fff2b0; font-size: 13px; }
   .pozo {
     width: 100%;
     max-width: 400px;
@@ -411,173 +404,293 @@
   </div>
 
 <script>
-  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyrUJew9icKC6uMr7OezJj1fdve79hIM6WzC9HPcSjlmdEfEodvxVUEUsLUfszZE8Rofg/exec";
+    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyrUJew9icKC6uMr7OezJj1fdve79hIM6WzC9HPcSjlmdEfEodvxVUEUsLUfszZE8Rofg/exec";
 
-  const FASES = [
-    { nombre: 'FASE 1', reward: 100, from: 1,     to: 500,   cap: 500    },
-    { nombre: 'FASE 2', reward: 75,  from: 501,   to: 1500,  cap: 1000   },
-    { nombre: 'FASE 3', reward: 50,  from: 1501,  to: 3500,  cap: 2000   },
-    { nombre: 'FASE 4', reward: 30,  from: 3501,  to: 8500,  cap: 5000   },
-    { nombre: 'FASE 5', reward: 20,  from: 8501,  to: 18500, cap: 10000  },
-    { nombre: 'FASE 6', reward: 10,  from: 18501, to: null,  cap: null   }
-  ];
+const FASES = [
+  { nombre: 'FASE 1', reward: 100, from: 1,     to: 500,   cap: 500    },
+  { nombre: 'FASE 2', reward: 75,  from: 501,   to: 1500,  cap: 1000   },
+  { nombre: 'FASE 3', reward: 50,  from: 1501,  to: 3500,  cap: 2000   },
+  { nombre: 'FASE 4', reward: 30,  from: 3501,  to: 8500,  cap: 5000   },
+  { nombre: 'FASE 5', reward: 20,  from: 8501,  to: 18500, cap: 10000  },
+  { nombre: 'FASE 6', reward: 10,  from: 18501, to: null,  cap: null   }
+];
 
-  const tg = window.Telegram?.WebApp;
-  let usuarioActual = null;
-  let USUARIOS = 0;
-  let faseInfo = null;
+const tg = window.Telegram?.WebApp;
+let usuarioActual = null;
+let USUARIOS = 0;
+let faseInfo = null;
 
-  if (tg) {
-    tg.ready();
-    tg.expand();
-    const user = tg.initDataUnsafe?.user;
-    if (user) {
-      usuarioActual = {
-        id: user.id,
-        username: user.username || '',
-        nombre: (user.first_name || '') + ' ' + (user.last_name || '')
-      };
-      document.getElementById('userInfo').textContent =
-        '👤 ' + (usuarioActual.username ? '@' + usuarioActual.username : usuarioActual.nombre.trim());
-    } else {
-      document.getElementById('userInfo').textContent = '⚠️ Abre desde Telegram';
-    }
+if (tg) {
+  tg.ready();
+  tg.expand();
+  const user = tg.initDataUnsafe?.user;
+  if (user) {
+    usuarioActual = {
+      id: user.id,
+      username: user.username || '',
+      nombre: (user.first_name || '') + ' ' + (user.last_name || '')
+    };
+    document.getElementById('userInfo').textContent =
+      '👤 ' + (usuarioActual.username ? '@' + usuarioActual.username : usuarioActual.nombre.trim());
   } else {
-    usuarioActual = { id: 123456789, username: 'prueba', nombre: 'Usuario Prueba' };
-    document.getElementById('userInfo').textContent = '🧪 Modo prueba (navegador)';
+    document.getElementById('userInfo').textContent = '⚠️ Abre desde Telegram';
+  }
+} else {
+  usuarioActual = { id: 123456789, username: 'prueba', nombre: 'Usuario Prueba' };
+  document.getElementById('userInfo').textContent = '🧪 Modo prueba (navegador)';
+}
+
+let totalSeconds = 0;
+let timerInterval = null;
+let multiplicadorActual = 1;
+
+const timerEl = document.getElementById('timer');
+const timerLabel = document.getElementById('timerLabel');
+const barraMinarEl = document.getElementById('barraMinar');
+const btnMinar = document.getElementById('btnMinar');
+const pozoEl = document.getElementById('pozo');
+const anilloFill = document.getElementById('anilloFill');
+const progresoTexto = document.getElementById('progresoTexto');
+
+const CIRCUNFERENCIA = 2 * Math.PI * 85;
+
+function actualizarTimer() {
+  if (totalSeconds <= 0) {
+    timerEl.textContent = '✅ LISTO';
+    timerLabel.textContent = '¡PUEDES MINAR AHORA!';
+    barraMinarEl.style.width = '100%';
+    btnMinar.disabled = false;
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    return;
+  }
+  const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+  const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+  const s = String(totalSeconds % 60).padStart(2, '0');
+  timerEl.textContent = h + ':' + m + ':' + s;
+  const totalDia = 24 * 60 * 60;
+  const pct = ((totalDia - totalSeconds) / totalDia) * 100;
+  barraMinarEl.style.width = pct + '%';
+  totalSeconds--;
+}
+
+function arrancarTimer(segundos) {
+  if (timerInterval) clearInterval(timerInterval);
+  totalSeconds = segundos;
+  if (segundos <= 0) {
+    timerEl.textContent = '✅ LISTO';
+    timerLabel.textContent = '¡PUEDES MINAR AHORA!';
+    barraMinarEl.style.width = '100%';
+    btnMinar.disabled = false;
+    btnMinar.innerHTML = '⛏️ MINAR (+' + (5 * multiplicadorActual) + ' ORO21)';
+  } else {
+    timerLabel.textContent = 'PRÓXIMA MINERÍA DISPONIBLE';
+    btnMinar.disabled = true;
+    btnMinar.innerHTML = '⛏️ MINAR';
+    actualizarTimer();
+    timerInterval = setInterval(actualizarTimer, 1000);
+  }
+}
+
+function calcularFaseActual(users) {
+  if (users === 0) return 0;
+  for (let i = 0; i < FASES.length; i++) {
+    const f = FASES[i];
+    if (f.cap === null) return i;
+    if (users >= f.from && users <= f.to) return i;
+  }
+  return FASES.length - 1;
+}
+
+function progresoFase(fase, users) {
+  if (fase.cap === null) return 100;
+  const done = Math.max(0, users - fase.from + 1);
+  return Math.min(100, (done / fase.cap) * 100);
+}
+
+function renderPozo() {
+  const faseActualIdx = calcularFaseActual(USUARIOS);
+  pozoEl.innerHTML = '';
+
+  if (faseActualIdx === 5) {
+    const div = document.createElement('div');
+    div.className = 'fase6-infinito';
+    div.innerHTML =
+      '<div class="infinito-simbolo">∞</div>' +
+      '<div class="infinito-texto">FASE 6 · ABIERTA</div>' +
+      '<div class="infinito-contador">👥 ' + USUARIOS.toLocaleString() + ' usuarios minando</div>' +
+      '<div class="infinito-minero">👷‍♂️⛏️</div>';
+    pozoEl.appendChild(div);
+    return;
   }
 
-  let totalSeconds = 0;
-  let timerInterval = null;
-  let multiplicadorActual = 1;
+  FASES.forEach((fase, i) => {
+    let estado = 'bloqueada';
+    if (i < faseActualIdx) estado = 'completada';
+    else if (i === faseActualIdx) estado = 'activa';
 
-  const timerEl = document.getElementById('timer');
-  const timerLabel = document.getElementById('timerLabel');
-  const barraMinarEl = document.getElementById('barraMinar');
-  const btnMinar = document.getElementById('btnMinar');
-  const pozoEl = document.getElementById('pozo');
-  const anilloFill = document.getElementById('anilloFill');
-  const progresoTexto = document.getElementById('progresoTexto');
+    if (estado === 'completada') return;
 
-  const CIRCUNFERENCIA = 2 * Math.PI * 85;
+    const pct = progresoFase(fase, USUARIOS);
+    const dentro = Math.max(0, Math.min(USUARIOS - fase.from + 1, fase.cap));
+    const contador = '👥 ' + dentro.toLocaleString() + ' / ' + fase.cap.toLocaleString();
 
-  function actualizarTimer() {
-    if (totalSeconds <= 0) {
-      timerEl.textContent = '✅ LISTO';
-      timerLabel.textContent = '¡PUEDES MINAR AHORA!';
-      barraMinarEl.style.width = '100%';
-      btnMinar.disabled = false;
-      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-      return;
+    let badge = '';
+    if (estado === 'activa') badge = '⛏️ EN PROGRESO';
+    else badge = '🔒 BLOQUEADA';
+
+    const div = document.createElement('div');
+    div.className = 'fase ' + estado;
+    div.setAttribute('data-fase', i);
+
+    let html = '<div class="fase-izq">';
+    html += '<div class="fase-nombre">' + fase.nombre + '</div>';
+    html += '<div class="fase-reward">🪙 ' + fase.reward + ' ORO21</div>';
+    html += '<div class="fase-contador">' + contador + '</div>';
+    html += '<div class="fase-barra"><div class="fase-barra-fill" style="width:' + pct + '%"></div></div>';
+    html += '</div>';
+    html += '<div class="fase-badge">' + badge + '</div>';
+
+    if (estado === 'activa') {
+      html += '<div class="minero">👷‍♂️</div>';
     }
-    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-    const s = String(totalSeconds % 60).padStart(2, '0');
-    timerEl.textContent = h + ':' + m + ':' + s;
-    const totalDia = 24 * 60 * 60;
-    const pct = ((totalDia - totalSeconds) / totalDia) * 100;
-    barraMinarEl.style.width = pct + '%';
-    totalSeconds--;
-  }
 
-  function arrancarTimer(segundos) {
-    if (timerInterval) clearInterval(timerInterval);
-    totalSeconds = segundos;
-    if (segundos <= 0) {
-      timerEl.textContent = '✅ LISTO';
-      timerLabel.textContent = '¡PUEDES MINAR AHORA!';
-      barraMinarEl.style.width = '100%';
-      btnMinar.disabled = false;
-      btnMinar.innerHTML = '⛏️ MINAR (+' + (5 * multiplicadorActual) + ' ORO21)';
-    } else {
-      timerLabel.textContent = 'PRÓXIMA MINERÍA DISPONIBLE';
-      btnMinar.disabled = true;
-      btnMinar.innerHTML = '⛏️ MINAR';
-      actualizarTimer();
-      timerInterval = setInterval(actualizarTimer, 1000);
-    }
-  }
+    div.innerHTML = html;
+    pozoEl.appendChild(div);
+  });
+}
 
-  function calcularFaseActual(users) {
-    if (users === 0) return 0;
-    for (let i = 0; i < FASES.length; i++) {
-      const f = FASES[i];
-      if (f.cap === null) return i;
-      if (users >= f.from && users <= f.to) return i;
-    }
-    return FASES.length - 1;
-  }
+function renderAnillo() {
+  const maxUsuarios = 21000;
+  const pct = Math.min(100, (USUARIOS / maxUsuarios) * 100);
+  const offset = CIRCUNFERENCIA - (pct / 100) * CIRCUNFERENCIA;
+  anilloFill.style.strokeDashoffset = offset;
+  progresoTexto.textContent = pct.toFixed(1) + '%';
+}
 
-  function progresoFase(fase, users) {
-    if (fase.cap === null) return 100;
-    const done = Math.max(0, users - fase.from + 1);
-    return Math.min(100, (done / fase.cap) * 100);
-  }
-
-  function renderPozo() {
-    const faseActualIdx = calcularFaseActual(USUARIOS);
-    pozoEl.innerHTML = '';
-
-    if (faseActualIdx === 5) {
-      const div = document.createElement('div');
-      div.className = 'fase6-infinito';
-      div.innerHTML =
-        '<div class="infinito-simbolo">∞</div>' +
-        '<div class="infinito-texto">FASE 6 · ABIERTA</div>' +
-        '<div class="infinito-contador">👥 ' + USUARIOS.toLocaleString() + ' usuarios minando</div>' +
-        '<div class="infinito-minero">👷‍♂️⛏️</div>';
-      pozoEl.appendChild(div);
-      return;
-    }
-
-    FASES.forEach((fase, i) => {
-      let estado = 'bloqueada';
-      if (i < faseActualIdx) estado = 'completada';
-      else if (i === faseActualIdx) estado = 'activa';
-
-      if (estado === 'completada') return;
-
-      const pct = progresoFase(fase, USUARIOS);
-      let contador = '';
-      const dentro = Math.max(0, Math.min(USUARIOS - fase.from + 1, fase.cap));
-      contador = '👥 ' + dentro.toLocaleString() + ' / ' + fase.cap.toLocaleString();
-
-      let badge = '';
-      if (estado === 'activa') badge = '⛏️ EN PROGRESO';
-      else badge = '🔒 BLOQUEADA';
-
-      const div = document.createElement('div');
-      div.className = 'fase ' + estado;
-      div.setAttribute('data-fase', i);
-
-      let html = '<div class="fase-izq">';
-      html += '<div class="fase-nombre">' + fase.nombre + '</div>';
-      html += '<div class="fase-reward">🪙 ' + fase.reward + ' ORO21</div>';
-      html += '<div class="fase-contador">' + contador + '</div>';
-      html += '<div class="fase-barra"><div class="fase-barra-fill" style="width:' + pct + '%"></div></div>';
-      html += '</div>';
-      html += '<div class="fase-badge">' + badge + '</div>';
-
-      if (estado === 'activa') {
-        html += '<div class="minero">👷‍♂️</div>';
+function cargarFases() {
+  return new Promise((resolve) => {
+    llamarWebhook('fasesInfo', {}, true).then((res) => {
+      if (res && res.ok) {
+        USUARIOS = res.total || 0;
+        faseInfo = res;
+        renderPozo();
+        renderAnillo();
       }
-
-      div.innerHTML = html;
-      pozoEl.appendChild(div);
+      resolve();
     });
+  });
+}
+
+function cargarEstadoInicial() {
+  timerLabel.textContent = 'Conectando con el servidor...';
+  llamarWebhook('estado', {}, true).then((res) => {
+    if (!res || !res.estado) {
+      timerEl.textContent = '--:--:--';
+      timerLabel.textContent = 'Reintentando conexion...';
+      return llamarWebhook('estado', {}, true).then((res2) => {
+        procesarEstado(res2);
+      });
+    }
+    procesarEstado(res);
+  });
+}
+
+function procesarEstado(res) {
+  if (!res || !res.estado) {
+    timerEl.textContent = '--:--:--';
+    timerLabel.textContent = 'Error al cargar';
+    return;
+  }
+  const est = res.estado;
+  multiplicadorActual = est.multiplicador || 1;
+
+  if (!est.registrado) {
+    timerEl.textContent = '❌';
+    timerLabel.textContent = 'REGÍSTRATE PRIMERO';
+    barraMinarEl.style.width = '0%';
+    btnMinar.disabled = false;
+    btnMinar.textContent = '📝 REGISTRARSE EN EL BOT';
+    btnMinar.onclick = function() {
+      mostrarModal('📝 Regístrate en el bot',
+        'Ve al bot y escribe /registro para registrarte paso a paso.');
+    };
+    actualizarPanelSaldos();
+    return;
   }
 
-  function renderAnillo() {
-    const maxUsuarios = 21000;
-    const pct = Math.min(100, (USUARIOS / maxUsuarios) * 100);
-    const offset = CIRCUNFERENCIA - (pct / 100) * CIRCUNFERENCIA;
-    anilloFill.style.strokeDashoffset = offset;
-    progresoTexto.textContent = pct.toFixed(1) + '%';
+  if (est.puedeMinar) {
+    arrancarTimer(0);
+  } else {
+    arrancarTimer(est.segundosRestantes);
   }
 
-  function cargarFases() {
-    return new Promise((resolve
-          document.body.appendChild(scriptElement);
+  actualizarPanelSaldos();
+}
+
+function actualizarPanelSaldos() {
+  return llamarWebhook('saldo', {}, true).then((res) => {
+    if (!res || !res.mensaje) {
+      document.getElementById('saldoTotal').textContent = '— ORO21';
+      document.getElementById('saldoRetirado').textContent = '— ORO21';
+      document.getElementById('saldoDisponible').textContent = '— ORO21';
+      return;
+    }
+    const texto = res.mensaje;
+    const matchTotal = texto.match(/Total acumulado:\s*([\d.-]+)/);
+    const matchRetirado = texto.match(/Ya retirado:\s*([\d.-]+)/);
+    const matchDisponible = texto.match(/Disponible:\s*([\d.-]+)/);
+    if (matchTotal) document.getElementById('saldoTotal').textContent = matchTotal[1] + ' ORO21';
+    if (matchRetirado) document.getElementById('saldoRetirado').textContent = matchRetirado[1] + ' ORO21';
+    if (matchDisponible) document.getElementById('saldoDisponible').textContent = matchDisponible[1] + ' ORO21';
+    document.getElementById('saldoMulti').textContent = multiplicadorActual + 'x';
+  });
+}
+  function llamarWebhook(accion, datos = {}, silencioso = false) {
+    return new Promise((resolve) => {
+      if (!usuarioActual) {
+        if (!silencioso) mostrarModal('Error', 'No se pudo identificar al usuario.');
+        resolve(null);
+        return;
+      }
+      const payload = {
+        accion: accion,
+        userId: usuarioActual.id,
+        username: usuarioActual.username,
+        ...datos
+      };
+      const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      const url = WEBHOOK_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload)) + "&callback=" + callbackName;
+      let finalizado = false;
+      const timeoutId = setTimeout(() => {
+        if (finalizado) return;
+        finalizado = true;
+        cleanup();
+        if (!silencioso) mostrarModal('⚠️ Error', 'Tiempo de espera agotado');
+        resolve(null);
+      }, 35000);
+      function cleanup() {
+        clearTimeout(timeoutId);
+        try { delete window[callbackName]; } catch(e) {}
+        if (scriptElement && scriptElement.parentNode) {
+          scriptElement.parentNode.removeChild(scriptElement);
+        }
+      }
+      window[callbackName] = function(data) {
+        if (finalizado) return;
+        finalizado = true;
+        cleanup();
+        resolve(data);
+      };
+      const scriptElement = document.createElement('script');
+      scriptElement.src = url;
+      scriptElement.onerror = function() {
+        if (finalizado) return;
+        finalizado = true;
+        cleanup();
+        if (!silencioso) mostrarModal('⚠️ Error', 'Error de conexión');
+        resolve(null);
+      };
+      document.body.appendChild(scriptElement);
     });
   }
 
